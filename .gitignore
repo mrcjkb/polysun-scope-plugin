@@ -1,0 +1,26 @@
+# /
+/.metadata
+/.recommenders
+/RemoteSystemsTempFiles
+/.dev/
+/target/
+/bin
+*/**/bin
+/.mvn
+!.mvn/wrapper/maven-wrapper.jar
+/*/**.swp
+*/**/.gradle
+*/**/build
+*/**/.sts4-cache
+*/**/dataLic.log
+/build/
+.gradle
+.settings/
+.classpath
+.project
+pom.xml
+gradle.properties
+secret.gpg
+out
+.idea
+Session.vim
