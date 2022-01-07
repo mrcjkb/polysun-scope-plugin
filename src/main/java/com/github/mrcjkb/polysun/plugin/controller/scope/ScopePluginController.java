@@ -83,7 +83,6 @@ public class ScopePluginController extends AbstractPluginController {
         var variableTimeStepSizesProperty = new Property(VARIABLE_TIME_STEP_SIZES_PROPERTY_KEY,
                 // Options
                 enumToStringArray(YesNoOption.class),
-                // new String[] {"Yes", "No"},
                 // Default option
                 YesNoOption.Yes.ordinal(),
                 // Tooltip
