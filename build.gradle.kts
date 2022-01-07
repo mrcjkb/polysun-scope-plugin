@@ -10,7 +10,7 @@ plugins {
 description = "Plots the sensor inputs to a scope during the simulation"
 group = "com.github.mrcjkb"
 
-defaultTasks = mutableListOf("buildPlugin")
+defaultTasks = mutableListOf("jar")
 
 repositories {
     mavenCentral()
@@ -29,6 +29,7 @@ java {
 val pluginIfVersion = "1.1.0"
 dependencies {
     api("com.velasolaris.polysun:polysun-plugin-if:$pluginIfVersion")
+    implementation("org.knowm.xchart:xchart:3.8.0")
     // For unit testing, please refer to the Gradle user manual: https://docs.gradle.org/current/userguide/java_testing.html
 }
 
@@ -40,11 +41,12 @@ val osArchitecture = System.getProperty("os.arch")
 val osVersion = System.getProperty("os.version")
 
 tasks {
-    register("buildPlugin", Jar::class) {
+    jar {
         from(configurations.runtimeClasspath.get()
-        .onEach { println("add from dependencies: ${it.name}") }
+        .onEach { println("Add from dependencies: ${it.name}") }
         .map { if (it.isDirectory) it else zipTree(it) })
         archiveFileName.set("${rootProject.name}.jar")
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
         manifest {
             // The following fields are optional
             attributes["Library"] = rootProject.name
