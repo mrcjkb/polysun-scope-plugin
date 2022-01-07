@@ -26,10 +26,10 @@ public class ScopePluginController extends AbstractPluginController {
         Yes,
         No
     }
-	private static final String VARIABLE_TIMESTEP_SIZE_PROPERTY_KEY = "Time step size / s";
-    private static final int MINIMUM_VARIABLE_TIME_STEP_SIZE_S = 1;
-    private static final int MAXIMUM_VARIABLE_TIME_STEP_SIZE_S = 900;
-    private static final int DEFAULT_VARIABLE_TIME_STEP_SIZE_S = MAXIMUM_VARIABLE_TIME_STEP_SIZE_S;
+	private static final String SCOPE_TIMESTEP_SIZE_PROPERTY_KEY = "Time step size / s";
+    private static final int MINIMUM_SCOPE_TIME_STEP_SIZE_S = 1;
+    private static final int MAXIMUM_SCOPE_TIME_STEP_SIZE_S = 900;
+    private static final int DEFAULT_SCOPE_TIME_STEP_SIZE_S = MAXIMUM_SCOPE_TIME_STEP_SIZE_S;
     protected static final int MAX_NUM_GENERIC_SENSORS = 30;
     private static final String SCOPE_UPDATE_INTERVAL_PROPERTY_KEY = "Scope update interval";
     private static enum ScopeUpdateIntervalOption {
@@ -76,7 +76,7 @@ public class ScopePluginController extends AbstractPluginController {
 		super.build(polysunSettings, parameters);
 		optionalScopeTimestepSizeS = isPlotVariableTimesteps()
             ? Optional.empty()
-            : Optional.of(getProperty(VARIABLE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
+            : Optional.of(getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
 	}
 
     @Override
@@ -100,7 +100,7 @@ public class ScopePluginController extends AbstractPluginController {
     public List<String> getPropertiesToHide(PolysunSettings polysunSettings, Map<String, Object> parameters) {
         List<String> propertiesToHide = super.getPropertiesToHide(polysunSettings, parameters);
         if (isPlotVariableTimesteps()) {
-            propertiesToHide.add(VARIABLE_TIMESTEP_SIZE_PROPERTY_KEY);
+            propertiesToHide.add(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY);
         }
         return propertiesToHide;
     }
@@ -121,12 +121,12 @@ public class ScopePluginController extends AbstractPluginController {
                 Yes: Plot inputs from each variable simulation time step.
                 No: Average inputs to a constant time step size before plotting.
                 """);
-        var variableTimstepSizeProperty = new Property(VARIABLE_TIMESTEP_SIZE_PROPERTY_KEY,
-                DEFAULT_VARIABLE_TIME_STEP_SIZE_S,
-                MINIMUM_VARIABLE_TIME_STEP_SIZE_S,
-                MAXIMUM_VARIABLE_TIME_STEP_SIZE_S,
+        var variableTimstepSizeProperty = new Property(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY,
+                DEFAULT_SCOPE_TIME_STEP_SIZE_S,
+                MINIMUM_SCOPE_TIME_STEP_SIZE_S,
+                MAXIMUM_SCOPE_TIME_STEP_SIZE_S,
                 """
-                The variable time step size in seconds.
+                The scope's time step size in seconds.
                 Forces Polysun to limit the maximum time step size to the defined value.
                 Smaller time steps than the maximum may still occur in the simulation.
                 Warning: Setting a too small value may cause memory to run out during the simulation.
