@@ -22,13 +22,19 @@ public class ScopePluginController extends AbstractPluginController {
 	private static final String VARIABLE_TIME_STEP_SIZES_PROPERTY_KEY = "Plot variable time steps";
     private static enum YesNoOption {
         Yes,
-        No;
+        No
     }
 	private static final String VARIABLE_TIMESTEP_SIZE_PROPERTY_KEY = "Time step size / s";
     private static final int MINIMUM_VARIABLE_TIME_STEP_SIZE_S = 1;
     private static final int MAXIMUM_VARIABLE_TIME_STEP_SIZE_S = 900;
     private static final int DEFAULT_VARIABLE_TIME_STEP_SIZE_S = MAXIMUM_VARIABLE_TIME_STEP_SIZE_S;
     protected static final int MAX_NUM_GENERIC_SENSORS = 30;
+    private static final String SCOPE_UPDATE_INTERVAL_PROPERTY_KEY = "Scope update interval";
+    private static enum ScopeUpdateIntervalOption {
+        Realtime,
+        Hourly,
+        Daily
+    }
 
     private int fixedTimestep;
     private double[][] polysunSensorData;
@@ -100,7 +106,16 @@ public class ScopePluginController extends AbstractPluginController {
                 Smaller time steps than the maximum may still occur in the simulation.
                 Warning: Setting a too small value may cause memory to run out during the simulation.
                 """);
-        return List.of(variableTimeStepSizesProperty, variableTimstepSizeProperty);
+        var scopeUpdateIntervalProperty = new Property(SCOPE_UPDATE_INTERVAL_PROPERTY_KEY,
+                enumToStringArray(ScopeUpdateIntervalOption.class),
+                ScopeUpdateIntervalOption.Hourly.ordinal(),
+                """
+                How often to update the scope (simulation time)?
+                Smaller update intervals may slow down the simulation.
+                """);
+        return List.of(variableTimeStepSizesProperty,
+                variableTimstepSizeProperty,
+                scopeUpdateIntervalProperty);
     }
 
     private boolean isPlotVariableTimesteps() {
