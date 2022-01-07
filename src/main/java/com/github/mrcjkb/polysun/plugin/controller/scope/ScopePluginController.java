@@ -1,10 +1,13 @@
 package com.github.mrcjkb.polysun.plugin.controller.scope;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -38,12 +41,13 @@ public class ScopePluginController extends AbstractPluginController {
         Daily
     }
 
+    private final List<Double> scopeTimeStamp = new ArrayList<>();
+    private final Map<Sensor, List<Double>> scopeSensorData = new HashMap<>();
+    private final Map<Sensor, Double> runningSums = new HashMap<>();
+
     private Optional<Integer> optionalScopeTimestepSizeS;
-    private double[][] polysunSensorData;
-    /** Running sums used in case of writing only fixed time steps */
-	protected transient float[] sensorDataRunningSums;
     /** simulationTime from the last call of control() */
-	private transient int mLastSimulationTime;
+	private transient int lastSimulationTime;
 
     @Override
     public String getName() {
@@ -83,18 +87,52 @@ public class ScopePluginController extends AbstractPluginController {
     public void initialiseSimulation(Map<String, Object> parameters) throws PluginControllerException {
         super.initialiseSimulation(parameters);
         logger.info("Simulation started.");
-        parameters.forEach((key, value) -> logger.fine(format("Parameter %s: Value %s of type %s", key, value.toString(), value.getClass().getName())));
-        sensorDataRunningSums = new float[getNumberOfSensorInputs()];
+        logParameters(Level.FINE, parameters);
     }
 
     @Override
     public int[] control(int simulationTime, boolean status, float[] sensors, float[] controlSignals, float[] logValues,
             boolean preRun, Map<String, Object> parameters) throws PluginControllerException {
 
-        if (preRun || sensors.length == 0)
-            return null;
+        double timestepWeight = computeTimestepWeight(simulationTime);
+		if (!preRun && status && isWriteTimestep(simulationTime)) {
+            updateScopeData(simulationTime, sensors, timestepWeight);
+        } else if (!preRun && status) {
+            incrementRunningSums(sensors, timestepWeight);
+        }
         return null;
     }
+
+    private void updateScopeData(int simulationTime, float[] sensorData, double timestepWeight) {
+        List<Sensor> sensors = getSensors();
+        scopeTimeStamp.add((double) simulationTime);
+        sensors.stream()
+            .filter(Sensor::isUsed)
+            .forEach(sensor -> {
+                int index = sensors.indexOf(sensor);
+                float sensorValue = sensorData[index];
+                double runningSum = runningSums.getOrDefault(sensor, 0D);
+                runningSum += sensorValue * timestepWeight;
+                List<Double> scopeSensorYData = scopeSensorData.getOrDefault(sensor, new ArrayList<>());
+                scopeSensorYData.add(runningSum);
+                scopeSensorData.put(sensor, scopeSensorYData);
+                runningSums.put(sensor, 0D); // reset running sum
+            });
+    }
+
+	private void incrementRunningSums(float[] sensorData, double timestepWeight) {
+        List<Sensor> sensors = getSensors();
+            sensors.stream()
+            .filter(Sensor::isUsed)
+            .forEach(sensor -> {
+                int index = sensors.indexOf(sensor);
+                float sensorValue = sensorData[index];
+                double runningSum = runningSums.getOrDefault(sensor, 0D);
+                runningSum += sensorValue * timestepWeight;
+                runningSums.put(sensor, runningSum);
+            });
+	}
+
 
     @Override
     public List<String> getPropertiesToHide(PolysunSettings polysunSettings, Map<String, Object> parameters) {
@@ -149,28 +187,21 @@ public class ScopePluginController extends AbstractPluginController {
     }
 
     /**
-	 * Increments the array of running sums
-	 * @param sensors sensor data from the {@link #control(int, boolean, float[], float[], float[], boolean, Map)} method.
-	 * @param weight value returned by {@link #computeTimestepWeight(int)}
+	 * @param the simulation time passed down from the {@link #control(int, boolean, float[], float[], float[], boolean, Map)} method.
+	 * @return {@code true} if the controller should write data
 	 */
-	protected void incrementRunningSums(float[] sensors, double weight) {
-		int ct = 0;
-		for (float s : sensors) {
-			if (Float.isNaN(s)) {
-				break;
-			}
-			sensorDataRunningSums[ct++] += s * weight;
-		}
+	protected boolean isWriteTimestep(int simulationTime) {
+		return isPlotVariableTimesteps() ? true : simulationTime % getFixedTimestep(null) == 0;
 	}
 
     /**
-	 * @return The number of utilized sensors
+	 * @param simulationTime simulation time in s
+	 * @return the weight for data to be saved depending on the time step size
 	 */
-	private int getNumberOfSensorInputs() {
-        return (int) getSensors()
-            .stream()
-            .filter(Sensor::isUsed)
-            .count();
+	protected double computeTimestepWeight(int simulationTime) {
+		return isPlotVariableTimesteps()
+            ? 1D
+            : (double) (simulationTime - lastSimulationTime) / getFixedTimestep(null);
 	}
 
     private static <E extends Enum<E>> String[] enumToStringArray(Class<E> enumClass) {
@@ -182,4 +213,9 @@ public class ScopePluginController extends AbstractPluginController {
         logger.fine(format("Converted enum %s to String array: %s", enumClass.getSimpleName(), Arrays.toString(stringArray)));
         return stringArray;
     }
+
+    private static void logParameters(Level logLevel, Map<String, Object> parameters) {
+        parameters.forEach((key, value) -> logger.log(logLevel, format("Parameter %s: Value %s of type %s", key, value.toString(), value.getClass().getName())));
+    }
+
 }
