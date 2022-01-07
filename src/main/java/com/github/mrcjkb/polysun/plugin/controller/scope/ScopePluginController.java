@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -12,6 +13,7 @@ import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration;
 import com.velasolaris.plugin.controller.spi.PluginControllerException;
 import com.velasolaris.plugin.controller.spi.PolysunSettings;
 import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration.Property;
+import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration.Sensor;
 
 import static java.lang.String.format;
 
@@ -36,8 +38,12 @@ public class ScopePluginController extends AbstractPluginController {
         Daily
     }
 
-    private int fixedTimestep;
+    private Optional<Integer> optionalScopeTimestepSizeS;
     private double[][] polysunSensorData;
+    /** Running sums used in case of writing only fixed time steps */
+	protected transient float[] sensorDataRunningSums;
+    /** simulationTime from the last call of control() */
+	private transient int mLastSimulationTime;
 
     @Override
     public String getName() {
@@ -48,6 +54,11 @@ public class ScopePluginController extends AbstractPluginController {
     public String getDescription() {
         return "Plots the sensor inputs to a scope during simulation.";
     }
+
+    @Override
+	public String getVersion() {
+		return "1.0.0";
+	}
 
     @Override
     public PluginControllerConfiguration getConfiguration(Map<String, Object> parameters)
@@ -61,10 +72,19 @@ public class ScopePluginController extends AbstractPluginController {
     }
 
     @Override
+	public void build(PolysunSettings polysunSettings, Map<String, Object> parameters) throws PluginControllerException {
+		super.build(polysunSettings, parameters);
+		optionalScopeTimestepSizeS = isPlotVariableTimesteps()
+            ? Optional.empty()
+            : Optional.of(getProperty(VARIABLE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
+	}
+
+    @Override
     public void initialiseSimulation(Map<String, Object> parameters) throws PluginControllerException {
         super.initialiseSimulation(parameters);
         logger.info("Simulation started.");
         parameters.forEach((key, value) -> logger.fine(format("Parameter %s: Value %s of type %s", key, value.toString(), value.getClass().getName())));
+        sensorDataRunningSums = new float[getNumberOfSensorInputs()];
     }
 
     @Override
@@ -84,6 +104,11 @@ public class ScopePluginController extends AbstractPluginController {
         }
         return propertiesToHide;
     }
+
+    @Override
+	public int getFixedTimestep(Map<String, Object> parameters) {
+		return optionalScopeTimestepSizeS.orElse(super.getFixedTimestep(parameters));
+	}
 
     private static List<Property> buildProperties() {
         var variableTimeStepSizesProperty = new Property(VARIABLE_TIME_STEP_SIZES_PROPERTY_KEY,
@@ -123,13 +148,38 @@ public class ScopePluginController extends AbstractPluginController {
             .getInt() == YesNoOption.Yes.ordinal();
     }
 
+    /**
+	 * Increments the array of running sums
+	 * @param sensors sensor data from the {@link #control(int, boolean, float[], float[], float[], boolean, Map)} method.
+	 * @param weight value returned by {@link #computeTimestepWeight(int)}
+	 */
+	protected void incrementRunningSums(float[] sensors, double weight) {
+		int ct = 0;
+		for (float s : sensors) {
+			if (Float.isNaN(s)) {
+				break;
+			}
+			sensorDataRunningSums[ct++] += s * weight;
+		}
+	}
+
+    /**
+	 * @return The number of utilized sensors
+	 */
+	private int getNumberOfSensorInputs() {
+        return (int) getSensors()
+            .stream()
+            .filter(Sensor::isUsed)
+            .count();
+	}
+
     private static <E extends Enum<E>> String[] enumToStringArray(Class<E> enumClass) {
         var stringArray = EnumSet.allOf(enumClass)
             .stream()
             .map(Object::toString)
             .collect(Collectors.toList())
             .toArray(String[]::new);
-        logger.info(format("Converted enum %s to String array: %s", enumClass.getSimpleName(), Arrays.toString(stringArray)));
+        logger.fine(format("Converted enum %s to String array: %s", enumClass.getSimpleName(), Arrays.toString(stringArray)));
         return stringArray;
     }
 }
