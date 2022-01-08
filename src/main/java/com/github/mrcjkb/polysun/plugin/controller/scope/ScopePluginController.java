@@ -1,9 +1,7 @@
 package com.github.mrcjkb.polysun.plugin.controller.scope;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -11,6 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScope;
 import com.velasolaris.plugin.controller.spi.AbstractPluginController;
 import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration;
 import com.velasolaris.plugin.controller.spi.PluginControllerException;
@@ -41,13 +40,11 @@ public class ScopePluginController extends AbstractPluginController {
         Daily
     }
 
-    private final List<Double> scopeTimeStamp = new ArrayList<>();
-    private final Map<Sensor, List<Double>> scopeSensorData = new HashMap<>();
-    private final Map<Sensor, Double> runningSums = new HashMap<>();
+    private IScope<Sensor> scope;
 
     private Optional<Integer> optionalScopeTimestepSizeS;
     /** simulationTime from the last call of control() */
-	private transient int lastSimulationTime;
+	private int lastSimulationTime;
 
     @Override
     public String getName() {
@@ -81,6 +78,7 @@ public class ScopePluginController extends AbstractPluginController {
 		optionalScopeTimestepSizeS = isPlotVariableTimesteps()
             ? Optional.empty()
             : Optional.of(getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
+        this.scope = new Scope<>(getSensors());
 	}
 
     @Override
@@ -96,43 +94,12 @@ public class ScopePluginController extends AbstractPluginController {
 
         double timestepWeight = computeTimestepWeight(simulationTime);
 		if (!preRun && status && isWriteTimestep(simulationTime)) {
-            updateScopeData(simulationTime, sensors, timestepWeight);
+            scope.updateScopeData(simulationTime, sensors, timestepWeight, Sensor::isUsed);
         } else if (!preRun && status) {
-            incrementRunningSums(sensors, timestepWeight);
+            scope.incrementRunningSums(sensors, timestepWeight, Sensor::isUsed);
         }
         return null;
     }
-
-    private void updateScopeData(int simulationTime, float[] sensorData, double timestepWeight) {
-        List<Sensor> sensors = getSensors();
-        scopeTimeStamp.add((double) simulationTime);
-        sensors.stream()
-            .filter(Sensor::isUsed)
-            .forEach(sensor -> {
-                int index = sensors.indexOf(sensor);
-                float sensorValue = sensorData[index];
-                double runningSum = runningSums.getOrDefault(sensor, 0D);
-                runningSum += sensorValue * timestepWeight;
-                List<Double> scopeSensorYData = scopeSensorData.getOrDefault(sensor, new ArrayList<>());
-                scopeSensorYData.add(runningSum);
-                scopeSensorData.put(sensor, scopeSensorYData);
-                runningSums.put(sensor, 0D); // reset running sum
-            });
-    }
-
-	private void incrementRunningSums(float[] sensorData, double timestepWeight) {
-        List<Sensor> sensors = getSensors();
-            sensors.stream()
-            .filter(Sensor::isUsed)
-            .forEach(sensor -> {
-                int index = sensors.indexOf(sensor);
-                float sensorValue = sensorData[index];
-                double runningSum = runningSums.getOrDefault(sensor, 0D);
-                runningSum += sensorValue * timestepWeight;
-                runningSums.put(sensor, runningSum);
-            });
-	}
-
 
     @Override
     public List<String> getPropertiesToHide(PolysunSettings polysunSettings, Map<String, Object> parameters) {
