@@ -33,23 +33,27 @@ public class Scope<InputType> implements IScope<InputType> {
     public void updateScopeData(int simulationTime, float[] inputData, Predicate<InputType> inputFilterPredicate) {
         double timestepWeight = computeTimestepWeight(simulationTime);
         if (isWriteTimestep(simulationTime)) {
-            timeStamp.add((double) simulationTime);
-            inputList.stream()
-                .filter(inputFilterPredicate)
-                .forEach(input -> {
-                    int index = inputList.indexOf(input);
-                    float sensorValue = inputData[index];
-                    double runningSum = runningSums.getOrDefault(input, 0D);
-                    runningSum += sensorValue * timestepWeight;
-                    List<Double> inputYData = yData.getOrDefault(input, new ArrayList<>());
-                    inputYData.add(runningSum);
-                    yData.put(input, inputYData);
-                    runningSums.put(input, 0D); // reset running sum
-                });
+            writeTimestepAndResetRunningSums(simulationTime, inputData, timestepWeight, inputFilterPredicate);
         } else {
             incrementRunningSums(inputData, timestepWeight, inputFilterPredicate);
         }
         lastSimulationTime = simulationTime;
+    }
+
+    private void writeTimestepAndResetRunningSums(int simulationTime, float[] inputData, double timestepWeight, Predicate<InputType> inputFilterPredicate) {
+        timeStamp.add((double) simulationTime);
+        inputList.stream()
+            .filter(inputFilterPredicate)
+            .forEach(input -> {
+                int index = inputList.indexOf(input);
+                float sensorValue = inputData[index];
+                double runningSum = runningSums.getOrDefault(input, 0D);
+                runningSum += sensorValue * timestepWeight;
+                List<Double> inputYData = yData.getOrDefault(input, new ArrayList<>());
+                inputYData.add(runningSum);
+                yData.put(input, inputYData);
+                runningSums.put(input, 0D); // reset running sum
+            });
     }
 
 	private void incrementRunningSums(float[] inputData, double timestepWeight, Predicate<InputType> inputFilterPredicate) {
@@ -71,7 +75,7 @@ public class Scope<InputType> implements IScope<InputType> {
 
     /**
 	 * @param the simulation time passed down from the {@link #control(int, boolean, float[], float[], float[], boolean, Map)} method.
-	 * @return {@code true} if the controller should write data
+	 * @return {@code true} if the scope should write data
 	 */
 	private boolean isWriteTimestep(int simulationTime) {
         return optionalFixedTimestepSize
@@ -81,7 +85,7 @@ public class Scope<InputType> implements IScope<InputType> {
 
     /**
 	 * @param simulationTime simulation time in s
-	 * @return the weight for data to be saved depending on the time step size
+	 * @return the weight for data to be saved depending on the time step size (a value between 0 and 1)
 	 */
 	protected double computeTimestepWeight(int simulationTime) {
         return optionalFixedTimestepSize
