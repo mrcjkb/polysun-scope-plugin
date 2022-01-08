@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -42,10 +41,6 @@ public class ScopePluginController extends AbstractPluginController {
 
     private IScope<Sensor> scope;
 
-    private Optional<Integer> optionalScopeTimestepSizeS;
-    /** simulationTime from the last call of control() */
-	private int lastSimulationTime;
-
     @Override
     public String getName() {
         return "Scope";
@@ -75,10 +70,9 @@ public class ScopePluginController extends AbstractPluginController {
     @Override
 	public void build(PolysunSettings polysunSettings, Map<String, Object> parameters) throws PluginControllerException {
 		super.build(polysunSettings, parameters);
-		optionalScopeTimestepSizeS = isPlotVariableTimesteps()
-            ? Optional.empty()
-            : Optional.of(getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
-        this.scope = new Scope<>(getSensors());
+        this.scope = isPlotVariableTimesteps()
+            ? new Scope<>(getSensors())
+            : new Scope<>(getSensors(), getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
 	}
 
     @Override
@@ -92,11 +86,8 @@ public class ScopePluginController extends AbstractPluginController {
     public int[] control(int simulationTime, boolean status, float[] sensors, float[] controlSignals, float[] logValues,
             boolean preRun, Map<String, Object> parameters) throws PluginControllerException {
 
-        double timestepWeight = computeTimestepWeight(simulationTime);
-		if (!preRun && status && isWriteTimestep(simulationTime)) {
-            scope.updateScopeData(simulationTime, sensors, timestepWeight, Sensor::isUsed);
-        } else if (!preRun && status) {
-            scope.incrementRunningSums(sensors, timestepWeight, Sensor::isUsed);
+		if (!preRun && status) {
+            scope.updateScopeData(simulationTime, sensors, Sensor::isUsed);
         }
         return null;
     }
@@ -112,7 +103,8 @@ public class ScopePluginController extends AbstractPluginController {
 
     @Override
 	public int getFixedTimestep(Map<String, Object> parameters) {
-		return optionalScopeTimestepSizeS.orElse(super.getFixedTimestep(parameters));
+		return scope.getOptionalFixedTimestepSizeS()
+            .orElse(super.getFixedTimestep(parameters));
 	}
 
     private static List<Property> buildProperties() {
@@ -152,24 +144,6 @@ public class ScopePluginController extends AbstractPluginController {
         return getProp(VARIABLE_TIME_STEP_SIZES_PROPERTY_KEY)
             .getInt() == YesNoOption.Yes.ordinal();
     }
-
-    /**
-	 * @param the simulation time passed down from the {@link #control(int, boolean, float[], float[], float[], boolean, Map)} method.
-	 * @return {@code true} if the controller should write data
-	 */
-	protected boolean isWriteTimestep(int simulationTime) {
-		return isPlotVariableTimesteps() ? true : simulationTime % getFixedTimestep(null) == 0;
-	}
-
-    /**
-	 * @param simulationTime simulation time in s
-	 * @return the weight for data to be saved depending on the time step size
-	 */
-	protected double computeTimestepWeight(int simulationTime) {
-		return isPlotVariableTimesteps()
-            ? 1D
-            : (double) (simulationTime - lastSimulationTime) / getFixedTimestep(null);
-	}
 
     private static <E extends Enum<E>> String[] enumToStringArray(Class<E> enumClass) {
         var stringArray = EnumSet.allOf(enumClass)
