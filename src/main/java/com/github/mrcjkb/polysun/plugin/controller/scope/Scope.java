@@ -49,6 +49,7 @@ public class Scope<InputType> implements IScope<InputType> {
         } else {
             incrementRunningSums(inputData, timestepWeight, inputFilterPredicate);
         }
+        lastSimulationTime = simulationTime;
     }
 
 	private void incrementRunningSums(float[] inputData, double timestepWeight, Predicate<InputType> inputFilterPredicate) {
