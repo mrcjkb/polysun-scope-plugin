@@ -74,7 +74,8 @@ public class Scope<InputType> implements IScope<InputType> {
 	 * @return {@code true} if the controller should write data
 	 */
 	private boolean isWriteTimestep(int simulationTime) {
-        return optionalFixedTimestepSize.map(fixedTimestepSize -> fixedTimestepSize == 0)
+        return optionalFixedTimestepSize
+            .map(fixedTimestepSize -> fixedTimestepSize == 0)
             .orElse(true);
 	}
 
@@ -83,7 +84,8 @@ public class Scope<InputType> implements IScope<InputType> {
 	 * @return the weight for data to be saved depending on the time step size
 	 */
 	protected double computeTimestepWeight(int simulationTime) {
-        return optionalFixedTimestepSize.map(fixedTimestepSize -> (double) (simulationTime - lastSimulationTime) / fixedTimestepSize)
+        return optionalFixedTimestepSize
+            .map(fixedTimestepSize -> (double) (simulationTime - lastSimulationTime) / fixedTimestepSize)
             .orElse(1D);
 	}
 
