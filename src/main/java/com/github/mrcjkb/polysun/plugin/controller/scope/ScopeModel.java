@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScope;
+import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScopeModel;
 
-public class Scope<InputType> implements IScope<InputType> {
+public class ScopeModel<InputType> implements IScopeModel<InputType> {
 
     private final List<InputType> inputList;
     private final List<Double> timeStamp = new ArrayList<>();
@@ -20,11 +20,11 @@ public class Scope<InputType> implements IScope<InputType> {
 	private int lastSimulationTime;
 
 
-    public Scope(List<InputType> inputList) {
+    public ScopeModel(List<InputType> inputList) {
         this(inputList, null);
     }
 
-    public Scope(List<InputType> inputList, Integer optionalFixedTimestepSizeS) {
+    public ScopeModel(List<InputType> inputList, Integer optionalFixedTimestepSizeS) {
         this.inputList = inputList;
         this.optionalFixedTimestepSize = Optional.ofNullable(optionalFixedTimestepSizeS);
     }

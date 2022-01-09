@@ -8,7 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScope;
+import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScopeModel;
 import com.velasolaris.plugin.controller.spi.AbstractPluginController;
 import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration;
 import com.velasolaris.plugin.controller.spi.PluginControllerException;
@@ -39,7 +39,7 @@ public class ScopePluginController extends AbstractPluginController {
         Daily
     }
 
-    private IScope<Sensor> scope;
+    private IScopeModel<Sensor> scope;
 
     @Override
     public String getName() {
@@ -71,8 +71,8 @@ public class ScopePluginController extends AbstractPluginController {
 	public void build(PolysunSettings polysunSettings, Map<String, Object> parameters) throws PluginControllerException {
 		super.build(polysunSettings, parameters);
         this.scope = isPlotVariableTimesteps()
-            ? new Scope<>(getSensors())
-            : new Scope<>(getSensors(), getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
+            ? new ScopeModel<>(getSensors())
+            : new ScopeModel<>(getSensors(), getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
 	}
 
     @Override
