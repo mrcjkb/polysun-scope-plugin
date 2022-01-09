@@ -1,8 +1,10 @@
 package com.github.mrcjkb.polysun.plugin.controller.scope;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.logging.Logger;
 import java.awt.Window;
 
 import javax.swing.SwingUtilities;
@@ -17,48 +19,65 @@ import org.knowm.xchart.style.Styler.ChartTheme;
 
 public class ScopeView<InputType> implements IScopeView<InputType> {
 
+    private static final Logger logger = Logger.getLogger(ScopeView.class.getName());
+
     private final IScopeModel<InputType> scopeModel;
-    private final Function<InputType, String> legendFactory;
+    private final Function<InputType, String> seriesNameFactory;
     private final XYChart chart;
-    private final SwingWrapper<XYChart> swingWrapper;
+    private Optional<SwingWrapper<XYChart>> swingWrapperOptional = Optional.empty();
 
 
-    public ScopeView(IScopeModel<InputType> scopeModel, Function<InputType, String> legendFactory) {
+    public ScopeView(IScopeModel<InputType> scopeModel, Function<InputType, String> seriesNameFactory) {
         this.scopeModel = scopeModel;
-        this.legendFactory = legendFactory;
+        this.seriesNameFactory = seriesNameFactory;
         chart = new XYChartBuilder()
             .xAxisTitle("simulation time / s")
             .yAxisTitle("")
             .theme(ChartTheme.GGPlot2)
             .build();
         scopeModel.forEachSeries(this::addSeries);
-        swingWrapper = new SwingWrapper<XYChart>(chart);
+        initialiseSwingWrapper();
     }
 
     @Override
     public void show() {
-        swingWrapper.displayChart();
+        swingWrapperOptional.ifPresent(SwingWrapper::displayChart);
     }
 
     @Override
     public void update() {
         scopeModel.forEachSeries(this::updateSeries);
-        swingWrapper.repaintChart();
+        swingWrapperOptional.ifPresent(SwingWrapper::repaintChart);
     }
 
     @Override
     public void disopse() {
-        Optional.ofNullable(SwingUtilities.getWindowAncestor(swingWrapper.getXChartPanel()))
-            .ifPresent(Window::dispose);
+        swingWrapperOptional.ifPresent(swingWrapper -> {
+            Optional.ofNullable(SwingUtilities.getWindowAncestor(swingWrapper.getXChartPanel()))
+                .ifPresent(Window::dispose);
+            initialiseSwingWrapper();
+        });
+    }
+
+    private void initialiseSwingWrapper() {
+        swingWrapperOptional = Optional.of(new SwingWrapper<XYChart>(chart));
     }
 
     private void addSeries(InputType input, List<Double> timeStamp, List<Double> ySeries) {
-        var seriesName = legendFactory.apply(input);
-        chart.addSeries(seriesName, timeStamp, ySeries);
+        var seriesName = seriesNameFactory.apply(input);
+        if (timeStamp == null || ySeries == null
+                || timeStamp.isEmpty() || ySeries.isEmpty()) {
+            logger.info("Add empty series: " + seriesName);
+            chart.addSeries(seriesName, List.of(0), List.of(0));
+        } else {
+            logger.info("Add series: " + seriesName);
+            chart.addSeries(seriesName, timeStamp, ySeries);
+        }
     }
 
     private void updateSeries(InputType input, List<Double> timeStamp, List<Double> ySeries) {
-        var seriesName = legendFactory.apply(input);
+        var seriesName = seriesNameFactory.apply(input);
+        logger.info("Update series: " + seriesName);
         chart.updateXYSeries(seriesName, timeStamp, ySeries, null);
     }
 

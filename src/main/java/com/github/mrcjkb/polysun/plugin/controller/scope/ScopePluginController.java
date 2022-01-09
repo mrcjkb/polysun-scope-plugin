@@ -77,9 +77,12 @@ public class ScopePluginController extends AbstractPluginController {
     @Override
 	public void build(PolysunSettings polysunSettings, Map<String, Object> parameters) throws PluginControllerException {
 		super.build(polysunSettings, parameters);
+        logger.info("Building...");
+        logger.info("Sensors:");
+        getSensors().forEach(sensor -> logger.info(sensor.toString()));
         scopeModel = Optional.of(isPlotVariableTimesteps()
-            ? new ScopeModel<>(getSensors())
-            : new ScopeModel<>(getSensors(), getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt()));
+            ? new ScopeModel<>(getSensors(), Sensor::isUsed)
+            : new ScopeModel<>(getSensors(), Sensor::isUsed, getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt()));
         scopeView.ifPresent(view -> view.disopse());
         scopeView = Optional.of(new ScopeView<>(scopeModel.get(), sensor -> sensor.getName() + " / " + sensor.getUnit()));
 	}
@@ -97,7 +100,7 @@ public class ScopePluginController extends AbstractPluginController {
             boolean preRun, Map<String, Object> parameters) throws PluginControllerException {
 
 		if (!preRun && status) {
-            scopeModel.ifPresent(model -> model.updateScopeData(simulationTime, sensors, Sensor::isUsed));
+            scopeModel.ifPresent(model -> model.updateScopeData(simulationTime, sensors));
         }
         if (isUpdateView(simulationTime)) {
             scopeView.ifPresent(IScopeView::update);
