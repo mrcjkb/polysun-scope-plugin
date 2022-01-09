@@ -45,13 +45,13 @@ public class ScopeView<InputType> implements IScopeView<InputType> {
 
     @Override
     public void show() {
-        swingWrapperOptional.ifPresent(SwingWrapper::displayChart);
+        SwingUtilities.invokeLater(() -> swingWrapperOptional.ifPresent(SwingWrapper::displayChart));
     }
 
     @Override
     public void update() {
         scopeModel.forEachSeries(this::updateSeries);
-        swingWrapperOptional.ifPresent(SwingWrapper::repaintChart);
+        SwingUtilities.invokeLater(() -> swingWrapperOptional.ifPresent(SwingWrapper::repaintChart));
     }
 
     @Override
