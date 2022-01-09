@@ -47,11 +47,7 @@ public class ScopeView<InputType> implements IScopeView<InputType> {
     @Override
     public void show() {
         initialiseSwingWrapper();
-        try {
-            SwingUtilities.invokeAndWait(() -> swingWrapperOptional.ifPresent(SwingWrapper::displayChart));
-        } catch (InvocationTargetException | InterruptedException e) {
-            logger.log(Level.WARNING, "Unable to show scope view.", e);
-        }
+        swingWrapperOptional.ifPresent(SwingWrapper::displayChart);
     }
 
     @Override
@@ -61,7 +57,7 @@ public class ScopeView<InputType> implements IScopeView<InputType> {
     }
 
     @Override
-    public void disopse() {
+    public void dispose() {
         try {
             swingWrapperOptional.ifPresent(swingWrapper -> {
                 Optional.ofNullable(SwingUtilities.getWindowAncestor(swingWrapper.getXChartPanel()))

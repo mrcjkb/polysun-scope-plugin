@@ -6,6 +6,6 @@ public interface IScopeView<InputType> {
 
     void update();
 
-    void disopse();
+    void dispose();
 
 }

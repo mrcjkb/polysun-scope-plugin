@@ -83,7 +83,7 @@ public class ScopePluginController extends AbstractPluginController {
         scopeModel = Optional.of(isPlotVariableTimesteps()
             ? new ScopeModel<>(getSensors(), Sensor::isUsed)
             : new ScopeModel<>(getSensors(), Sensor::isUsed, getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt()));
-        scopeView.ifPresent(view -> view.disopse());
+        scopeView.ifPresent(IScopeView::dispose);
         scopeView = Optional.of(new ScopeView<>(scopeModel.get(), sensor -> sensor.getName() + " / " + sensor.getUnit()));
 	}
 
@@ -92,7 +92,7 @@ public class ScopePluginController extends AbstractPluginController {
         super.initialiseSimulation(parameters);
         logger.info("Simulation started.");
         logParameters(Level.FINE, parameters);
-        scopeView.ifPresent(view -> view.show());
+        scopeView.ifPresent(IScopeView::show);
     }
 
     @Override
