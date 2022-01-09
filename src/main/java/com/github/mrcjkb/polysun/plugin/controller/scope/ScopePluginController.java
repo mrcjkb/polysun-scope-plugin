@@ -35,8 +35,8 @@ public class ScopePluginController extends AbstractPluginController {
     }
 	private static final String SCOPE_TIMESTEP_SIZE_PROPERTY_KEY = "Time step size / s";
     private static final int MINIMUM_SCOPE_TIME_STEP_SIZE_S = 1;
-    private static final int MAXIMUM_SCOPE_TIME_STEP_SIZE_S = 900;
-    private static final int DEFAULT_SCOPE_TIME_STEP_SIZE_S = MAXIMUM_SCOPE_TIME_STEP_SIZE_S;
+    private static final int MAXIMUM_SCOPE_TIME_STEP_SIZE_S = 3600;
+    private static final int DEFAULT_SCOPE_TIME_STEP_SIZE_S = 900;
     protected static final int MAX_NUM_GENERIC_SENSORS = 30;
     private static final String SCOPE_UPDATE_INTERVAL_PROPERTY_KEY = "Scope update interval";
     private static enum ScopeViewUpdateIntervalOption {
