@@ -3,6 +3,7 @@ package com.github.mrcjkb.polysun.plugin.controller.scope;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.awt.Window;
 
@@ -40,11 +41,11 @@ public class ScopeView<InputType> implements IScopeView<InputType> {
         chart.getStyler().setZoomResetByButton(true);
         chart.getStyler().setLegendPosition(LegendPosition.OutsideS);
         scopeModel.forEachSeries(this::addSeries);
-        initialiseSwingWrapper();
     }
 
     @Override
     public void show() {
+        initialiseSwingWrapper();
         SwingUtilities.invokeLater(() -> swingWrapperOptional.ifPresent(SwingWrapper::displayChart));
     }
 
@@ -56,11 +57,14 @@ public class ScopeView<InputType> implements IScopeView<InputType> {
 
     @Override
     public void disopse() {
-        swingWrapperOptional.ifPresent(swingWrapper -> {
-            Optional.ofNullable(SwingUtilities.getWindowAncestor(swingWrapper.getXChartPanel()))
-                .ifPresent(Window::dispose);
-            initialiseSwingWrapper();
-        });
+        try {
+            swingWrapperOptional.ifPresent(swingWrapper -> {
+                Optional.ofNullable(SwingUtilities.getWindowAncestor(swingWrapper.getXChartPanel()))
+                    .ifPresent(Window::dispose);
+            });
+        } catch (Throwable t) {
+            logger.log(Level.INFO, "Could not dispose scope view. Already disposed?");
+        }
     }
 
     private void initialiseSwingWrapper() {
