@@ -79,7 +79,7 @@ public class ScopeModel<InputType> implements IScopeModel<InputType> {
 	 */
 	private boolean isWriteTimestep(int simulationTime) {
         return optionalFixedTimestepSize
-            .map(fixedTimestepSize -> fixedTimestepSize == 0)
+            .map(fixedTimestepSize -> simulationTime % fixedTimestepSize == 0)
             .orElse(true);
 	}
 
