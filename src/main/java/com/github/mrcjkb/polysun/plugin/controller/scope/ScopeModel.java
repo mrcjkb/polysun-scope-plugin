@@ -13,8 +13,8 @@ public class ScopeModel<InputType> implements IScopeModel<InputType> {
 
     private final List<InputType> inputList;
     private final List<Double> timeStamp = new ArrayList<>();
-    private final Map<InputType, List<Double>> yData = new HashMap<>();
-    private final Map<InputType, Double> runningSums = new HashMap<>();
+    private final Map<InputType, List<Double>> ySeriesMap = new HashMap<>();
+    private final Map<InputType, Double> runningSumsMap = new HashMap<>();
     private final Optional<Integer> optionalFixedTimestepSize;
     /** simulationTime from the last scope update */
 	private int lastSimulationTime;
@@ -40,6 +40,13 @@ public class ScopeModel<InputType> implements IScopeModel<InputType> {
         lastSimulationTime = simulationTime;
     }
 
+    @Override
+    public void forEachSeries(ScopeSeriesConsumer<InputType> consumer) {
+        ySeriesMap.forEach((input, ySeries) -> {
+            consumer.accept(input, timeStamp, ySeries);
+        });
+    }
+
     private void writeTimestepAndResetRunningSums(int simulationTime, float[] inputData, double timestepWeight, Predicate<InputType> inputFilterPredicate) {
         timeStamp.add((double) simulationTime);
         inputList.stream()
@@ -47,12 +54,12 @@ public class ScopeModel<InputType> implements IScopeModel<InputType> {
             .forEach(input -> {
                 int index = inputList.indexOf(input);
                 float sensorValue = inputData[index];
-                double runningSum = runningSums.getOrDefault(input, 0D);
+                double runningSum = runningSumsMap.getOrDefault(input, 0D);
                 runningSum += sensorValue * timestepWeight;
-                List<Double> inputYData = yData.getOrDefault(input, new ArrayList<>());
+                List<Double> inputYData = ySeriesMap.getOrDefault(input, new ArrayList<>());
                 inputYData.add(runningSum);
-                yData.put(input, inputYData);
-                runningSums.put(input, 0D); // reset running sum
+                ySeriesMap.put(input, inputYData);
+                runningSumsMap.put(input, 0D); // reset running sum
             });
     }
 
@@ -62,9 +69,9 @@ public class ScopeModel<InputType> implements IScopeModel<InputType> {
             .forEach(input -> {
                 int index = inputList.indexOf(input);
                 float inputValue = inputData[index];
-                double runningSum = runningSums.getOrDefault(input, 0D);
+                double runningSum = runningSumsMap.getOrDefault(input, 0D);
                 runningSum += inputValue * timestepWeight;
-                runningSums.put(input, runningSum);
+                runningSumsMap.put(input, runningSum);
             });
 	}
 

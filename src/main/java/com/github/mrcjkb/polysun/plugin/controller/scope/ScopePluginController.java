@@ -4,11 +4,13 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScopeModel;
+import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScopeView;
 import com.velasolaris.plugin.controller.spi.AbstractPluginController;
 import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration;
 import com.velasolaris.plugin.controller.spi.PluginControllerException;
@@ -22,6 +24,10 @@ public class ScopePluginController extends AbstractPluginController {
 
     private static final Logger logger = Logger.getLogger(ScopePluginController.class.getName());
 
+    private static final int SECONDS_PER_MINUTE = 60;
+    private static final int MINUTES_PER_HOUR = 60;
+    private static final int HOURS_PER_DAY = 24;
+
 	private static final String VARIABLE_TIME_STEP_SIZES_PROPERTY_KEY = "Plot variable time steps";
     private static enum YesNoOption {
         Yes,
@@ -33,13 +39,14 @@ public class ScopePluginController extends AbstractPluginController {
     private static final int DEFAULT_SCOPE_TIME_STEP_SIZE_S = MAXIMUM_SCOPE_TIME_STEP_SIZE_S;
     protected static final int MAX_NUM_GENERIC_SENSORS = 30;
     private static final String SCOPE_UPDATE_INTERVAL_PROPERTY_KEY = "Scope update interval";
-    private static enum ScopeUpdateIntervalOption {
+    private static enum ScopeViewUpdateIntervalOption {
         Realtime,
         Hourly,
         Daily
     }
 
-    private IScopeModel<Sensor> scope;
+    private Optional<IScopeModel<Sensor>> scopeModel = Optional.empty();
+    private Optional<IScopeView<Sensor>> scopeView = Optional.empty();
 
     @Override
     public String getName() {
@@ -70,9 +77,11 @@ public class ScopePluginController extends AbstractPluginController {
     @Override
 	public void build(PolysunSettings polysunSettings, Map<String, Object> parameters) throws PluginControllerException {
 		super.build(polysunSettings, parameters);
-        this.scope = isPlotVariableTimesteps()
+        scopeModel = Optional.of(isPlotVariableTimesteps()
             ? new ScopeModel<>(getSensors())
-            : new ScopeModel<>(getSensors(), getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt());
+            : new ScopeModel<>(getSensors(), getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt()));
+        scopeView.ifPresent(view -> view.disopse());
+        scopeView = Optional.of(new ScopeView<>(scopeModel.get(), sensor -> sensor.getName() + " / " + sensor.getUnit()));
 	}
 
     @Override
@@ -80,6 +89,7 @@ public class ScopePluginController extends AbstractPluginController {
         super.initialiseSimulation(parameters);
         logger.info("Simulation started.");
         logParameters(Level.FINE, parameters);
+        scopeView.ifPresent(view -> view.show());
     }
 
     @Override
@@ -87,9 +97,23 @@ public class ScopePluginController extends AbstractPluginController {
             boolean preRun, Map<String, Object> parameters) throws PluginControllerException {
 
 		if (!preRun && status) {
-            scope.updateScopeData(simulationTime, sensors, Sensor::isUsed);
+            scopeModel.ifPresent(model -> model.updateScopeData(simulationTime, sensors, Sensor::isUsed));
+        }
+        if (isUpdateView(simulationTime)) {
+            scopeView.ifPresent(IScopeView::update);
         }
         return null;
+    }
+
+    private boolean isUpdateView(int simulationTime) {
+        int selectedScopeUpdateIntervalOptionIndex = getProperty(SCOPE_UPDATE_INTERVAL_PROPERTY_KEY).getInt();
+        var scopeViewUpdateIntervalOption = ScopeViewUpdateIntervalOption.values()[selectedScopeUpdateIntervalOptionIndex];
+        int scopeViewUpdateIntervalS = switch (scopeViewUpdateIntervalOption) {
+            case Daily -> SECONDS_PER_MINUTE * MINUTES_PER_HOUR * HOURS_PER_DAY;
+            case Hourly -> SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
+            case Realtime -> 1;
+        };
+        return simulationTime % scopeViewUpdateIntervalS == 0;
     }
 
     @Override
@@ -103,7 +127,7 @@ public class ScopePluginController extends AbstractPluginController {
 
     @Override
 	public int getFixedTimestep(Map<String, Object> parameters) {
-		return scope.getOptionalFixedTimestepSizeS()
+		return scopeModel.flatMap(IScopeModel::getOptionalFixedTimestepSizeS)
             .orElse(super.getFixedTimestep(parameters));
 	}
 
@@ -129,8 +153,8 @@ public class ScopePluginController extends AbstractPluginController {
                 Warning: Setting a too small value may cause memory to run out during the simulation.
                 """);
         var scopeUpdateIntervalProperty = new Property(SCOPE_UPDATE_INTERVAL_PROPERTY_KEY,
-                enumToStringArray(ScopeUpdateIntervalOption.class),
-                ScopeUpdateIntervalOption.Hourly.ordinal(),
+                enumToStringArray(ScopeViewUpdateIntervalOption.class),
+                ScopeViewUpdateIntervalOption.Hourly.ordinal(),
                 """
                 How often to update the scope (simulation time)?
                 Smaller update intervals may slow down the simulation.
