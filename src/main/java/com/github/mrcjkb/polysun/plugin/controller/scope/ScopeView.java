@@ -6,6 +6,7 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.awt.Window;
+import java.lang.reflect.InvocationTargetException;
 
 import javax.swing.SwingUtilities;
 
@@ -46,7 +47,11 @@ public class ScopeView<InputType> implements IScopeView<InputType> {
     @Override
     public void show() {
         initialiseSwingWrapper();
-        SwingUtilities.invokeLater(() -> swingWrapperOptional.ifPresent(SwingWrapper::displayChart));
+        try {
+            SwingUtilities.invokeAndWait(() -> swingWrapperOptional.ifPresent(SwingWrapper::displayChart));
+        } catch (InvocationTargetException | InterruptedException e) {
+            logger.log(Level.WARNING, "Unable to show scope view.", e);
+        }
     }
 
     @Override
