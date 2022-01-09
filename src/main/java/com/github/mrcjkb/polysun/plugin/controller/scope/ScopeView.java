@@ -1,6 +1,5 @@
 package com.github.mrcjkb.polysun.plugin.controller.scope;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -16,6 +15,7 @@ import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.style.Styler.ChartTheme;
+import org.knowm.xchart.style.Styler.LegendPosition;
 
 public class ScopeView<InputType> implements IScopeView<InputType> {
 
@@ -35,6 +35,10 @@ public class ScopeView<InputType> implements IScopeView<InputType> {
             .yAxisTitle("")
             .theme(ChartTheme.GGPlot2)
             .build();
+        chart.getStyler().setZoomEnabled(true);
+        chart.getStyler().setZoomResetByDoubleClick(false);
+        chart.getStyler().setZoomResetByButton(true);
+        chart.getStyler().setLegendPosition(LegendPosition.OutsideS);
         scopeModel.forEachSeries(this::addSeries);
         initialiseSwingWrapper();
     }
