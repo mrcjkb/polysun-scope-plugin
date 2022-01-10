@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScopeModel;
 import com.github.mrcjkb.polysun.plugin.controller.scope.api.IScopeView;
@@ -15,6 +16,7 @@ import com.velasolaris.plugin.controller.spi.AbstractPluginController;
 import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration;
 import com.velasolaris.plugin.controller.spi.PluginControllerException;
 import com.velasolaris.plugin.controller.spi.PolysunSettings;
+import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration.Log;
 import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration.Property;
 import com.velasolaris.plugin.controller.spi.PluginControllerConfiguration.Sensor;
 
@@ -70,6 +72,9 @@ public class ScopePluginController extends AbstractPluginController {
         return new PluginControllerConfiguration.Builder()
             .setNumGenericSensors(MAX_NUM_GENERIC_SENSORS)
             .setNumGenericControlSignals(0)
+            .setLogs(IntStream.range(0, MAX_NUM_GENERIC_SENSORS)
+                    .mapToObj(logIndex -> new Log("Sensor " + logIndex))
+                    .collect(Collectors.toList()))
             .setProperties(buildProperties())
             .build();
     }
@@ -99,6 +104,10 @@ public class ScopePluginController extends AbstractPluginController {
     public int[] control(int simulationTime, boolean status, float[] sensors, float[] controlSignals, float[] logValues,
             boolean preRun, Map<String, Object> parameters) throws PluginControllerException {
 
+        // Show inputs in simulation analysis
+        for (int i = 0; i < sensors.length; i++) {
+            logValues[i] = sensors[i];
+        }
 		if (!preRun && status) {
             scopeModel.ifPresent(model -> model.updateScopeData(simulationTime, sensors));
         }
