@@ -30,16 +30,16 @@ public class ScopePluginController extends AbstractPluginController {
     private static final int MINUTES_PER_HOUR = 60;
     private static final int HOURS_PER_DAY = 24;
 
-	private static final String VARIABLE_TIME_STEP_SIZES_PROPERTY_KEY = "Plot variable time steps";
+    private static final String VARIABLE_TIME_STEP_SIZES_PROPERTY_KEY = "Plot variable time steps";
     private static enum YesNoOption {
         Yes,
         No
     }
-	private static final String SCOPE_TIMESTEP_SIZE_PROPERTY_KEY = "Time step size / s";
+    private static final String SCOPE_TIMESTEP_SIZE_PROPERTY_KEY = "Time step size / s";
     private static final int MINIMUM_SCOPE_TIME_STEP_SIZE_S = 1;
     private static final int MAXIMUM_SCOPE_TIME_STEP_SIZE_S = 3600;
     private static final int DEFAULT_SCOPE_TIME_STEP_SIZE_S = 900;
-    protected static final int MAX_NUM_GENERIC_SENSORS = 30;
+    private static final int MAX_NUM_GENERIC_SENSORS = 30;
     private static final String SCOPE_UPDATE_INTERVAL_PROPERTY_KEY = "Scope update interval";
     private static enum ScopeViewUpdateIntervalOption {
         Realtime,
@@ -61,9 +61,9 @@ public class ScopePluginController extends AbstractPluginController {
     }
 
     @Override
-	public String getVersion() {
-		return "1.0.0";
-	}
+    public String getVersion() {
+        return "1.0.0";
+    }
 
     @Override
     public PluginControllerConfiguration getConfiguration(Map<String, Object> parameters)
@@ -80,17 +80,17 @@ public class ScopePluginController extends AbstractPluginController {
     }
 
     @Override
-	public void build(PolysunSettings polysunSettings, Map<String, Object> parameters) throws PluginControllerException {
-		super.build(polysunSettings, parameters);
+    public void build(PolysunSettings polysunSettings, Map<String, Object> parameters) throws PluginControllerException {
+        super.build(polysunSettings, parameters);
         logger.info("Building...");
         logger.info("Sensors:");
         getSensors().forEach(sensor -> logger.info(sensor.toString()));
         scopeModel = Optional.of(isPlotVariableTimesteps()
-            ? new ScopeModel<>(getSensors(), Sensor::isUsed)
-            : new ScopeModel<>(getSensors(), Sensor::isUsed, getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt()));
+                ? new ScopeModel<>(getSensors(), Sensor::isUsed)
+                : new ScopeModel<>(getSensors(), Sensor::isUsed, getProperty(SCOPE_TIMESTEP_SIZE_PROPERTY_KEY).getInt()));
         scopeView.ifPresent(IScopeView::dispose);
         scopeView = Optional.of(new ScopeView<>(scopeModel.get(), sensor -> sensor.getName() + " / " + sensor.getUnit()));
-	}
+    }
 
     @Override
     public void initialiseSimulation(Map<String, Object> parameters) throws PluginControllerException {
@@ -108,7 +108,7 @@ public class ScopePluginController extends AbstractPluginController {
         for (int i = 0; i < sensors.length; i++) {
             logValues[i] = sensors[i];
         }
-		if (!preRun && status) {
+        if (!preRun && status) {
             scopeModel.ifPresent(model -> model.updateScopeData(simulationTime, sensors));
         }
         if (isUpdateView(simulationTime)) {
@@ -138,10 +138,10 @@ public class ScopePluginController extends AbstractPluginController {
     }
 
     @Override
-	public int getFixedTimestep(Map<String, Object> parameters) {
-		return scopeModel.flatMap(IScopeModel::getOptionalFixedTimestepSizeS)
+    public int getFixedTimestep(Map<String, Object> parameters) {
+        return scopeModel.flatMap(IScopeModel::getOptionalFixedTimestepSizeS)
             .orElse(super.getFixedTimestep(parameters));
-	}
+    }
 
     private static List<Property> buildProperties() {
         var variableTimeStepSizesProperty = new Property(VARIABLE_TIME_STEP_SIZES_PROPERTY_KEY,
